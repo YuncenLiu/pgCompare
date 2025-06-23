@@ -1,58 +1,57 @@
+
+
 <div>
   <h1 style="font-size: 70px;text-align: center">pgCompare</h1>
-  <h2 style="text-align: center">Data Compare</h2>
+  <h2 style="text-align: center">数据一致性对比工具</h2>
 </div>
 <hr>
 
 [![License](https://img.shields.io/github/license/CrunchyData/postgres-operator)](LICENSE.md)
 
-# Data Compare Made Simple
+# 数据一致性对比变得简单
 
-**pgCompare** is a Java-based tool for validating data consistency after replication or migration between databases. It's designed for scenarios like:
+**pgCompare** 是一个基于 Java 的工具，用于在数据库复制或迁移后验证数据的一致性。它适用于以下场景：
 
+- **从 Oracle/DB2/MariaDB/MySQL/MSSQL 迁移到 Postgres：** 在迁移过程中或迁移后进行数据对比。
+- **相同或不同数据库平台之间的逻辑复制：** 跨平台验证数据一致性，同时最小化数据库开销。
+- **主-主复制配置：** 定期检查数据一致性以降低风险。
 
-- **Data migration from Oracle/DB2/MariaDB/MySQL/MSSQL to Postgres:**  Compare data during or post-migration.
+pgCompare 使用哈希算法来高效比较表数据。主键和其余列的哈希值会被存储在一个仓库中，减少存储和网络需求。比较操作是并行处理的，从而提高了性能。
 
-- **Logical replication between same or different database platforms:** Validate data across platforms while minimizing database overhead.
+这个开源项目由 **Crunchy Data** 维护，并采用 **Apache 2.0 许可证** 发布，以便更广泛的使用、测试和反馈。
 
-- **Active-Active replication configuration:**  Regularly verify data consistency to mitigate risks.
+# 功能特性
 
-pgCompare uses hashing to compare table data efficiently. Hash values for primary keys and remaining columns are stored in a repository, reducing storage and network demands. Comparisons are processed in parallel, improving performance.
+- 支持 Oracle、PostgreSQL、DB2、MariaDB、MySQL 和 MSSQL。
+- 使用哈希进行高效的并行数据比较。
+- 支持批量处理以优化性能。
+- 将多个对比项目的配置集中存储在一个仓库中。
 
-This open-source project is maintained by **Crunchy Data** under the **Apache 2.0 License** and is made available for broader use, testing, and feedback.
+# 安装指南
 
-# Features
+## 前提条件
 
-- Supports Oracle, PostgreSQL, DB2, MariaDB, MySQL, and MSSQL.
-- Efficient parallel comparisons using hashing.
-- Handles batch processing for performance tuning.
-- Stores configurations for multiple comparison projects in a central repository.
+在开始构建和安装之前，请确保满足以下前提条件：
 
-# Installation
+1. **Java 21 或更高版本**
+2. **Maven 3.9 或更高版本**
+3. **PostgreSQL 15 或更高版本**（作为仓库数据库）
+4. 支持的 JDBC 驱动程序（目前支持 DB2、PostgreSQL、MySQL、MSSQL 和 Oracle）。
+5. 直接连接 PostgreSQL（例如不支持通过 pgBouncer）。
 
-## Requirements
+## 局限性
 
-Before initiating the build and installation process, ensure the following prerequisites are met:
+- 日期/时间戳仅比较到秒级别（格式：DDMMYYYYHH24MISS）。
+- 不支持的数据类型：blob、long、longraw、bytea。
+- 布尔类型在跨平台比较时存在限制。
+- 低精度类型（float、real）不能与高精度类型（double）直接比较。
+- 不同数据库对 float 的转换可能不同。如果在 float 数据类型的比较中出现问题，可以使用 float-cast 选项在 char 和 notation（科学计数法）之间切换。
 
-1. **Java** 21 or later.
-2. **Maven** 3.9 or later.
-3. **Postgres** 15 or later (for the repository).
-4. Supported JDBC drivers (DB2, Postgres, MySQL, MSSQL and Oracle currently supported).
-5. Direct Postgres connections (e.g., no pgBouncer).
+# 快速入门
 
-## Limitations
+## 1. Fork 仓库
 
-- Date/Timestamps compared only to the second (format: DDMMYYYYHH24MISS).
-- Unsupported data types: blob, long, longraw, bytea.
-- Cross-platform comparison limitations with boolean type.
-- Low precission types (float, real) cannot be compared to high precission types (double).
-- Different databases cast float to different values.  Use float-cast option to switch between char and notation (scientific notation) if there are compare problems with float data types.
-
-# Getting Started
-
-## 1. Fork the repository
-
-## 2. Clone and Build
+## 2. 克隆并构建项目
 
 ```shell
 git clone --depth 1 git@github.com:<your-github-username>/pgCompare.git
@@ -60,103 +59,110 @@ cd pgCompare
 mvn clean install
 ```
 
-## 3. Configure Properties
 
-Copy `pgcompare.properties.sample` to `pgcompare.properties` and update the connection parameters for your repository, source, and target databases.
-By default, the application looks for the properties file in the execution directory. Use `PGCOMPARE_CONFIG` environment variable to specify a custom properties file location.
+## 3. 配置属性文件
 
-At a minimal the `repo-xxxxx` parameters are required in the properties file (or specified by environment parameters).  Besides the properties file and environment variables, another alternative is to store the property settings in the `dc_project` table.  Settings can be stored in the `project_config` column in JSON format ({"parameter": "value"}).  Certain system parameters like log-destination can only be specified via the properties file or environment variables.
+将 [pgcompare.properties.sample](file:///Users/xiang/xiang/study/Project/openPro/pgCompare/pgcompare.properties.sample) 复制为 [pgcompare.properties](file:///Users/xiang/xiang/study/Project/openPro/pgCompare/pgcompare.properties)，并更新其中的仓库、源数据库和目标数据库的连接参数。
 
-## 4. Initialize Repository
+默认情况下，应用程序会在执行目录中查找属性文件。您可以通过设置环境变量 `PGCOMPARE_CONFIG` 来指定自定义的属性文件路径。
 
-Run the script or use the command below to set up the PostgreSQL repository:
+最简配置需要在属性文件中设置 `repo-xxxxx` 类参数（或者通过环境变量）。除了属性文件和环境变量外，还可以将配置信息以 JSON 格式（{"parameter": "value"}）存储在 `dc_project` 表的 `project_config` 字段中。某些系统参数（如 log-destination）只能通过属性文件或环境变量指定。
+
+## 4. 初始化仓库数据库
+
+运行以下命令或脚本来初始化 PostgreSQL 仓库：
 
 ```shell
 java -jar pgcompare.jar --init
 ```
 
-## 5. Discover Tables
 
-Discover and map tables in specified schemas:
+## 5. 自动发现表结构
+
+自动发现并映射指定 schema 中的表：
 
 ```shell
 java -jar pgcompare.jar --discovery
 ```
 
-# Usage
 
-## Define Table Mapping
+# 使用方法
 
-1. Automatic Discovery
+## 定义表映射
 
-    Discover and map tables in specified schemas:
+1. **自动发现**
 
-    ```shell
-    java -jar pgcompare.jar --discover
-    ```
+   自动发现并映射指定 schema 中的表：
 
-2. Manual Registration 
+   ```shell
+   java -jar pgcompare.jar --discover
+   ```
 
-    Insert mappings into `dc_table` and `dc_table_map` tables in the repository.
 
-## Run Data Comparison
+2. **手动注册**
+
+   手动向仓库中的 `dc_table` 和 `dc_table_map` 表插入映射关系。
+
+## 执行数据对比
 
 ```shell
 java -jar pgcompare.jar --batch 0
 ```
 
-Batch 0 processes all data. Use `PGCOMPARE-BATCH` or specify the batch number using the `--batch` argument to specify a batch number.
 
-## Recheck Discrepancies
+批次 0 表示处理所有数据。您可以使用 `PGCOMPARE-BATCH` 环境变量或通过 `--batch` 参数指定特定的批次号。
 
-Revalidate flagged rows:
+## 重新检查差异数据
+
+重新校验标记有问题的行：
 
 ```shell
 java -jar pgcompare.jar --batch 0 --check
 ```
 
-# Upgrading
 
-## Version 0.3.0 Enhancements
+# 升级说明
 
-- DB2 support.
-- Case-sensitive table/column name handling.
-- New project configurations for easier management.
+## 版本 0.3.0 新增功能
 
-**Note:** Drop and recreate the repository to upgrade to 0.3.0.
+- 增加了对 DB2 的支持。
+- 支持区分大小写的表名/列名。
+- 新增了项目配置功能，便于管理多个对比任务。
 
-# Advanced Configuration
+**注意：** 升级到 0.3.0 时需删除并重新创建仓库数据库。
 
-## Properties
+# 高级配置
 
-Define properties via a file, environment variables, or the `dc_project` table. Environment variables override file settings and must be prefixed with `PGCOMPARE_`.
+## 属性配置方式
 
-Examples:
-- File: `batch-fetch-size=2000`
-- Env: `PGCOMPARE_BATCH_FETCH_SIZE=2000`
+属性可通过属性文件、环境变量或 `dc_project` 表进行配置。环境变量优先于属性文件，并且必须以 `PGCOMPARE_` 为前缀。
 
-## Tuning Performance
+示例：
+- 属性文件：`batch-fetch-size=2000`
+- 环境变量：`PGCOMPARE_BATCH_FETCH_SIZE=2000`
 
-- **Batch size:** Adjust `batch-fetch-size` and `batch-commit-size` for memory efficiency.
-- **Threads:** Use loader-threads (default: 4) for parallel processing.
-- **Observer throttle:** Enable to prevent overloading temporary tables (observer-throttle=true).
-- **Java Heap Size:** For larger datasets, there may be a need to increase the Java Heap size.  Use the options `-Xms` and `-Xmx` when executing pgCompare (`java -Xms512m -Xmx2g -jar pgcompare.jar`). 
+## 性能调优建议
 
-## Repository Recommendations
+- **批次大小：** 调整 `batch-fetch-size` 和 `batch-commit-size` 以提高内存效率。
+- **线程数量：** 使用 `loader-threads`（默认值：4）进行并行处理。
+- **观察者节流：** 启用 `observer-throttle=true` 以防止临时表过载。
+- **Java 堆内存：** 对于大数据集，可能需要增加 Java 堆内存。可在执行时使用 `-Xms` 和 `-Xmx` 参数设置（例如：`java -Xms512m -Xmx2g -jar pgcompare.jar`）。
 
-- Minimal requirements: 2 vCPUs, 8 GB RAM.
-- PostgreSQL settings:
-  - shared_buffers=2048MB
-  - work_mem=256MB
-  - max_parallel_workers=16
+## 仓库数据库推荐配置
 
-## Projects
+- 最小要求：2 vCPUs，8 GB RAM。
+- PostgreSQL 推荐配置：
+    - shared_buffers=2048MB
+    - work_mem=256MB
+    - max_parallel_workers=16
 
-Projects allow for the repository to maintain different mappings for different compare objectives.  This allows a central pgCompare repository to be used for multiple compare projects.  Each table has a `pid` column which is the project id.  If no project is specified, the default project (pid = 1) is used.
+## 多项目支持
 
-# Viewing Results
+pgCompare 支持多个对比项目，每个项目通过 [pid](file:///Users/xiang/xiang/study/Project/openPro/pgCompare/src/main/java/com/crunchydata/pgCompare.java#L53-L53)（项目 ID）进行区分。这样可以在同一个仓库中管理不同的对比任务。如果没有指定项目，默认使用 `pid = 1`。
 
-## Summary from Last Run
+# 查看结果
+
+## 上次运行的摘要信息
 
 ```sql
 WITH mr AS (SELECT max(rid) rid FROM dc_result)
@@ -167,7 +173,8 @@ FROM dc_result r
 ORDER BY table_name;
 ```
 
-## Out-of-Sync Rows
+
+## 不一致的记录
 
 ```sql
 SELECT COALESCE(s.table_name, t.table_name) AS table_name,
@@ -181,70 +188,72 @@ FROM dc_source s
          FULL OUTER JOIN dc_target t ON s.pk = t.pk and s.tid=t.tid;
 ```
 
-# Reference
 
-## Properties
+# 参考文档
 
-Properties are categorized into four sections: system, repository, source, and target. Each section has specific properties, as described in detail in the documentation.  The properties can be specified via a configuration file, environment variables or a combination of both.  To use environment variables, the environment variable will be the name of the property in upper case with dashes '-' converted to underscore '_' and prefixed with PGCOMPARE_.  For example, batch-fetch-size can be set by using the environment variable PGCOMPARE_BATCH_FETCH_SIZE.
+## 属性分类
 
-### System
-- batch-fetch-size: Sets the fetch size for retrieving rows from the source or target database.
-- batch-commit-size:  The commit size controls the array size and number of rows concurrently inserted into the dc_source/dc_target staging tables.
-- batch-progress-report-size:  Defines the number of rows used in mod to report progress.
-- database-source:  Determines if the sorting of the rows based on primary key occurs on the source/target database.  If set to true, the default, the rows will be sorted before being compared.  If set to false, the sorting will take place in the repository database.
-- float-cast: Defines how float and double data types are cast for hash function (notation|char).  Default is char.
-- loader-threads: Sets the number of threads to load data into the temporary tables. Default is 4.  Set to 0 to disable loader threads.
-- log-level:   Level to determine the amount of log messages written to the log destination.
-- log-destination:  Location where log messages will be written.  Default is stdout.
-- message-queue-size:  Size of message queue used by loader threads (nbr messages).  Default is 100.
-- number-cast: Defines how numbers are cast for hash function (notation|standard).  Default is notation (for scientific notation).
-- observer-throttle:  Set to true or false, instructs the loader threads to pause and wait for the observer thread to catch up before continuing to load more data into the staging tables.
-- observer-throttle-size:  Number of rows loaded before the loader thread will sleep and wait for clearance from the observer thread.
-- observer-vacuum:  Set to true or false, instructs the observer whether to perform a vacuum on the staging tables during checkpoints.
+属性分为四类：系统、仓库、源数据库和目标数据库。详细描述如下：
 
-### Repository
+### 系统属性
 
-- repo-dbname:  Repository database name.
-- repo-host: Host name of server hosting the Postgres repository database.
-- repo-password:  Postgres database user password.
-- repo-port:  Repository Postgres instance port.
-- repo-schema:  Name of schema that owns the repository tables.
-- repo-sslmode: Set the SSL mode to use for the database connection (disable|prefer|require)
-- repo-user:  Postgres database username.
+- batch-fetch-size：控制从源或目标数据库获取数据的批大小。
+- batch-commit-size：控制提交到 `dc_source/dc_target` 表的记录数。
+- batch-progress-report-size：用于报告进度的记录数。
+- database-source：是否在源/目标数据库上排序（默认 true）。
+- float-cast：定义浮点数如何参与哈希计算（notation|char），默认 char。
+- loader-threads：加载数据的线程数，默认 4。
+- log-level：日志级别。
+- log-destination：日志输出位置，默认 stdout。
+- message-queue-size：消息队列大小，默认 100。
+- number-cast：数字转换方式（notation|standard），默认 notation。
+- observer-throttle：启用观察者节流机制。
+- observer-throttle-size：加载多少条数据后暂停。
+- observer-vacuum：是否在检查点执行 vacuum。
 
-### Source
+### 仓库属性
 
-- source-database-hash: True or false, instructs the application where the hash should be computed (on the database or by the application).
-- source-dbname:  Database or service name.
-- source-host:  Database server name.
-- source-password:  Database password.
-- source-port:  Database port.
-- source-schema:  Name of schema that owns the tables.
-- source-sslmode: Set the SSL mode to use for the database connection (disable|prefer|require)
-- source-type:  Database type: oracle, postgres
-- source-user:   Database username.
+- repo-dbname：仓库数据库名称。
+- repo-host：仓库数据库主机。
+- repo-password：仓库数据库密码。
+- repo-port：仓库数据库端口。
+- repo-schema：仓库数据库模式。
+- repo-sslmode：SSL 模式（disable|prefer|require）。
+- repo-user：仓库数据库用户名。
 
-### Target
+### 源数据库属性
 
-- target-database-hash: True or false, instructs the application where the hash should be computed (on the database or by the application).
-- target-dbname:  Database or service name.
-- target-host:  Database server name.
-- target-password:  Database password.
-- target-port:  Database port.
-- target-schema:  Name of schema that owns the tables.
-- target-sslmode: Set the SSL mode to use for the database connection (disable|prefer|require)
-- target-type:  Database type: oracle, postgres
-- target-user:  Database username.
+- source-database-hash：是否在源数据库计算哈希。
+- source-dbname：源数据库名称。
+- source-host：源数据库主机。
+- source-password：源数据库密码。
+- source-port：源数据库端口。
+- source-schema：源数据库 schema 名称。
+- source-sslmode：SSL 模式。
+- source-type：源数据库类型（oracle, postgres）。
+- source-user：源数据库用户名。
 
-## Property Precedence
+### 目标数据库属性
 
-The system contains default values for every parameter.  These can be over-ridden using environment variables, properties file, or values saved in the `dc_project` table.  The following is the order of precedence used:
+- target-database-hash：是否在目标数据库计算哈希。
+- target-dbname：目标数据库名称。
+- target-host：目标数据库主机。
+- target-password：目标数据库密码。
+- target-port：目标数据库端口。
+- target-schema：目标数据库 schema 名称。
+- target-sslmode：SSL 模式。
+- target-type：目标数据库类型（oracle, postgres）。
+- target-user：目标数据库用户名。
 
-- Default values
-- Properties file
-- Environment variables
-- Settings stored in `dc_project` table
+## 属性优先级顺序
 
-# License
+属性可以通过默认值、属性文件、环境变量或 `dc_project` 表配置。优先级顺序如下：
 
-**pgCompare** is licensed under the [Apache 2.0 license](LICENSE.md).
+1. 默认值
+2. 属性文件
+3. 环境变量
+4. `dc_project` 表中的配置
+
+# 许可协议
+
+**pgCompare** 遵循 [Apache 2.0 许可协议](LICENSE.md)。
